@@ -2,13 +2,29 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Hunde & Katzen Ninja PRO - FINAL FIX</title>
+<title>Hunde & Katzen Ninja PRO - FINAL FIX + SHOP</title>
 <style>
     body { margin:0; text-align:center; background:#111; color:white; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
     canvas { display:block; margin:20px auto; background:#000; border: 4px solid #333; border-radius: 8px; cursor: crosshair; }
     .stats { font-size: 20px; margin: 10px; }
-    button { padding:10px 20px; font-size:16px; cursor:pointer; background: #444; color: white; border: none; border-radius: 5px; }
+    button { padding:10px 20px; font-size:16px; cursor:pointer; background: #444; color: white; border: none; border-radius: 5px; margin: 5px; }
     button:hover { background: #666; }
+
+    /* SHOP STYLES */
+    #shop-overlay {
+        display: none;
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        padding: 20px;
+        border: 3px solid #fdbb2d;
+        border-radius: 15px;
+        z-index: 10;
+        width: 300px;
+    }
+    .shop-item { margin: 15px 0; padding: 10px; border-bottom: 1px solid #444; }
+    .shop-item button { background: #28a745; width: 100%; }
 </style>
 </head>
 <body>
@@ -17,8 +33,23 @@
     Punkte: <span id="score">0</span> | Leben: <span id="lives">3</span> | Level: <span id="level">1</span> | Combo: <span id="combo">x1</span>
 </div>
 
-<button onclick="togglePause()">Pause</button>
+<button onclick="togglePause()">Shop / Pause</button>
 <button onclick="restartGame()">Neustart</button>
+
+<!-- SHOP OVERLAY -->
+<div id="shop-overlay">
+    <h2>Ninja Shop</h2>
+    <p>Deine Punkte: <span id="shop-points">0</span></p>
+    <div class="shop-item">
+        <span>❤️ +1 Leben</span>
+        <button onclick="buyItem('life', 50)">Kaufen (50 Pkt)</button>
+    </div>
+    <div class="shop-item">
+        <span>⚡ Combo-Booster</span>
+        <button onclick="buyItem('combo', 100)">Kaufen (100 Pkt)</button>
+    </div>
+    <button onclick="togglePause()" style="background:#cc0000; margin-top:10px;">Schließen</button>
+</div>
 
 <canvas id="game" width="700" height="450"></canvas>
 
@@ -40,7 +71,29 @@ let spawner=null;
 let mouseX=0, mouseY=0;
 
 let bossActive=false, bossClicks=0, bossRequired=25, bossTime=15, bossLives=2, bossTimer=null;
+let comboBonus = 0; // Shop Upgrade
 const comboTime=800;
+
+// SHOP FUNKTION
+function buyItem(type, price) {
+    if (score >= price) {
+        score -= price;
+        if (type === 'life') lives++;
+        if (type === 'combo') comboBonus += 1;
+        updateUI();
+        alert("Upgrade gekauft!");
+    } else {
+        alert("Zu wenig Punkte!");
+    }
+}
+
+function updateUI() {
+    document.getElementById("score").innerText = score;
+    document.getElementById("shop-points").innerText = score;
+    document.getElementById("lives").innerText = lives;
+    document.getElementById("level").innerText = level;
+    document.getElementById("combo").innerText = "x" + (combo + comboBonus);
+}
 
 function drawBackground(){
     let sky=ctx.createLinearGradient(0,0,0,450);
@@ -53,25 +106,21 @@ function drawBackground(){
     ctx.fillRect(0,400,700,50);
 }
 
-// DER FIX: Die Schnur wird jetzt fett und leuchtend gezeichnet
 function drawTrail() {
     if (trail.length < 2) return;
     ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = "#00ffff"; // Cyan Leuchten
+    ctx.strokeStyle = "#00ffff"; 
     ctx.lineWidth = 6;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.shadowBlur = 20;
     ctx.shadowColor = "#00ffff";
-    
     ctx.moveTo(trail[0].x, trail[0].y);
     for (let i = 1; i < trail.length; i++) {
         ctx.lineTo(trail[i].x, trail[i].y);
     }
     ctx.stroke();
-    
-    // Zweite weiße Linie in der Mitte für den "Klingen"-Effekt
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -139,7 +188,7 @@ canvas.addEventListener("mousedown", () => {
                 let now = Date.now();
                 combo = (now - lastHitTime < comboTime) ? combo + 1 : 1;
                 lastHitTime = now;
-                score += a.points * combo;
+                score += a.points * (combo + comboBonus);
             }
             animals.splice(i, 1);
             break; 
@@ -152,13 +201,16 @@ function gameLoop(){
     
     if(paused){
         ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fillRect(0,0,700,450);
-        ctx.fillStyle="white"; ctx.font="50px Arial"; ctx.fillText("PAUSE",350,225);
+        ctx.fillStyle="white"; ctx.font="50px Arial"; ctx.textAlign="center";
+        ctx.fillText("SHOP GEÖFFNET",350,225);
     } else if(gameOver) {
         ctx.fillStyle="rgba(0,0,0,0.8)"; ctx.fillRect(0,0,700,450);
-        ctx.fillStyle="red"; ctx.font="60px Arial"; ctx.fillText("GAME OVER",350,200);
+        ctx.fillStyle="red"; ctx.font="60px Arial"; ctx.textAlign="center";
+        ctx.fillText("GAME OVER",350,200);
     } else if(bossActive) {
         ctx.fillStyle="rgba(0,0,0,0.4)"; ctx.fillRect(0,0,700,450);
-        ctx.font="120px Arial"; ctx.fillText("🤖",350,220);
+        ctx.font="120px Arial"; ctx.textAlign="center";
+        ctx.fillText("🤖",350,220);
         ctx.font="25px Arial"; ctx.fillStyle="white";
         ctx.fillText("BOSS ATTACKE!", 350, 60);
         ctx.fillText("Clicks: " + bossClicks + "/" + bossRequired, 350, 300);
@@ -177,22 +229,16 @@ function gameLoop(){
         updateLevel();
     }
     
-    // DIE SCHNUR WIRD AM ENDE ÜBER ALLES GEZEICHNET
     drawTrail();
-    
-    // Verlangsames Abbauen der Schnur
     if (trail.length > 0 && Math.random() > 0.3) trail.shift();
 
-    document.getElementById("score").innerText = score;
-    document.getElementById("lives").innerText = lives;
-    document.getElementById("level").innerText = level;
-    document.getElementById("combo").innerText = "x" + combo;
+    updateUI();
     if(lives <= 0) gameOver = true;
     requestAnimationFrame(gameLoop);
 }
 
 function updateLevel(){
-    let newLevel = Math.floor(score/50) + 1; 
+    let newLevel = Math.floor(score/100) + 1; 
     if(newLevel !== level){
         level = newLevel;
         spawnRate = Math.max(800, 2500 - (level * 100));
@@ -211,10 +257,16 @@ function startBoss(){
 
 function spawnAnimal(){ if(!paused && !gameOver && !bossActive) animals.push(new Animal()); }
 function restartSpawner(){ if(spawner) clearInterval(spawner); spawner=setInterval(spawnAnimal, spawnRate); }
-function togglePause(){ paused = !paused; }
+
+function togglePause(){ 
+    paused = !paused; 
+    document.getElementById("shop-overlay").style.display = paused ? "block" : "none";
+}
+
 function restartGame(){ 
-    score=0; lives=3; level=1; combo=1; speedMultiplier=1; spawnRate=2500;
+    score=0; lives=3; level=1; combo=1; comboBonus=0; speedMultiplier=1; spawnRate=2500;
     animals=[]; particles=[]; trail=[]; bossActive=false; gameOver=false; paused=false;
+    document.getElementById("shop-overlay").style.display = "none";
     if(bossTimer) clearInterval(bossTimer);
     restartSpawner(); 
 }
