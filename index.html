@@ -42,11 +42,11 @@
     <p>Deine Punkte: <span id="shop-points">0</span></p>
     <div class="shop-item">
         <span>❤️ +1 Leben</span>
-        <button onclick="buyItem('life', 50)">Kaufen (50 Pkt)</button>
+        <button id="buy-life" onclick="buyItem('life')">Kaufen (50 Pkt)</button>
     </div>
     <div class="shop-item">
         <span>⚡ Combo-Booster</span>
-        <button onclick="buyItem('combo', 100)">Kaufen (100 Pkt)</button>
+        <button id="buy-combo" onclick="buyItem('combo')">Kaufen (100 Pkt)</button>
     </div>
     <button onclick="togglePause()" style="background:#cc0000; margin-top:10px;">Schließen</button>
 </div>
@@ -71,19 +71,31 @@ let spawner=null;
 let mouseX=0, mouseY=0;
 
 let bossActive=false, bossClicks=0, bossRequired=25, bossTime=15, bossLives=2, bossTimer=null;
-let comboBonus = 0; // Shop Upgrade
+let comboBonus = 0; 
 const comboTime=800;
 
-// SHOP FUNKTION
-function buyItem(type, price) {
-    if (score >= price) {
-        score -= price;
+// PREISE ALS OBJEKT
+let prices = {
+    life: 50,
+    combo: 100
+};
+
+// SHOP FUNKTION MIT PREISERHÖHUNG
+function buyItem(type) {
+    let currentPrice = prices[type];
+    
+    if (score >= currentPrice) {
+        score -= currentPrice;
+        
         if (type === 'life') lives++;
         if (type === 'combo') comboBonus += 1;
+        
+        // Preis um 25% erhöhen und aufrunden
+        prices[type] = Math.ceil(currentPrice * 1.25);
+        
         updateUI();
-        alert("Upgrade gekauft!");
     } else {
-        alert("Zu wenig Punkte!");
+        alert("Zu wenig Punkte! Du brauchst " + currentPrice + " Pkt.");
     }
 }
 
@@ -93,6 +105,55 @@ function updateUI() {
     document.getElementById("lives").innerText = lives;
     document.getElementById("level").innerText = level;
     document.getElementById("combo").innerText = "x" + (combo + comboBonus);
+    
+    // Shop-Buttons mit neuen Preisen beschriften
+    document.getElementById("buy-life").innerText = `Kaufen (${prices.life} Pkt)`;
+    document.getElementById("buy-combo").innerText = `Kaufen (${prices.combo} Pkt)`;
+}
+
+function togglePause() {
+    paused = !paused;
+    document.getElementById("shop-overlay").style.display = paused ? "block" : "none";
+}
+
+function restartGame() {
+    score = 0; lives = 3; level = 1; combo = 1; comboBonus = 0;
+    prices = { life: 50, combo: 100 }; // Preise zurücksetzen
+    animals = []; particles = []; trail = [];
+    gameOver = false; paused = false;
+    document.getElementById("shop-overlay").style.display = "none";
+    updateUI();
+    restartSpawner();
+}
+
+function restartSpawner() {
+    clearInterval(spawner);
+    spawner = setInterval(() => {
+        if(!paused && !gameOver && !bossActive) animals.push(new Animal());
+    }, spawnRate);
+}
+
+function updateLevel() {
+    let newLevel = Math.floor(score / 50) + 1;
+    if(newLevel > level) {
+        level = newLevel;
+        spawnRate = Math.max(800, 2500 - (level * 150));
+        speedMultiplier = 1 + (level * 0.1);
+        restartSpawner();
+        if(level % 3 === 0) startBoss();
+    }
+}
+
+function startBoss() {
+    bossActive = true; bossClicks = 0; bossTime = 15;
+    bossTimer = setInterval(() => {
+        bossTime--;
+        if(bossTime <= 0) {
+            bossActive = false; clearInterval(bossTimer);
+            lives--; if(lives <= 0) gameOver = true;
+            restartSpawner();
+        }
+    }, 1000);
 }
 
 function drawBackground(){
@@ -120,9 +181,6 @@ function drawTrail() {
     for (let i = 1; i < trail.length; i++) {
         ctx.lineTo(trail[i].x, trail[i].y);
     }
-    ctx.stroke();
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
 }
@@ -171,7 +229,7 @@ canvas.addEventListener("mousedown", () => {
             bossLives--;
             if(bossLives <= 0) { 
                 bossActive=false; clearInterval(bossTimer); score += 50; 
-                spawnRate += 300; restartSpawner();
+                restartSpawner();
             } else { bossClicks=0; bossTime=15; }
         }
         return;
@@ -198,11 +256,10 @@ canvas.addEventListener("mousedown", () => {
 
 function gameLoop(){
     drawBackground();
-    
     if(paused){
         ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fillRect(0,0,700,450);
         ctx.fillStyle="white"; ctx.font="50px Arial"; ctx.textAlign="center";
-        ctx.fillText("SHOP GEÖFFNET",350,225);
+        ctx.fillText("PAUSE",350,225);
     } else if(gameOver) {
         ctx.fillStyle="rgba(0,0,0,0.8)"; ctx.fillRect(0,0,700,450);
         ctx.fillStyle="red"; ctx.font="60px Arial"; ctx.textAlign="center";
@@ -218,7 +275,7 @@ function gameLoop(){
     } else {
         animals.forEach((a, i) => {
             a.update(); a.draw();
-            if(a.y > 480) { if(!a.isRobot && !a.isLifeStealer && !a.isAngel) lives--; animals.splice(i, 1); }
+            if(a.y > 480) { if(!a.isRobot && !a.isLifeStealer && !a.isAngel) { lives--; if(lives<=0) gameOver=true; } animals.splice(i, 1); }
         });
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy; p.life--;
@@ -228,47 +285,10 @@ function gameLoop(){
         });
         updateLevel();
     }
-    
     drawTrail();
     if (trail.length > 0 && Math.random() > 0.3) trail.shift();
-
     updateUI();
-    if(lives <= 0) gameOver = true;
     requestAnimationFrame(gameLoop);
-}
-
-function updateLevel(){
-    let newLevel = Math.floor(score/100) + 1; 
-    if(newLevel !== level){
-        level = newLevel;
-        spawnRate = Math.max(800, 2500 - (level * 100));
-        speedMultiplier = 1 + (level * 0.05);
-        restartSpawner();
-        if(level >= 2 && level % 2 === 0) startBoss(); 
-    }
-}
-
-function startBoss(){
-    bossActive=true; bossClicks=0; bossRequired = Math.min(80, level * 10); 
-    bossTime=15; bossLives=2;
-    if(bossTimer) clearInterval(bossTimer);
-    bossTimer=setInterval(()=>{ if(!paused) bossTime--; if(bossTime<=0){ bossTime=15; bossClicks=0; lives--; } },1000);
-}
-
-function spawnAnimal(){ if(!paused && !gameOver && !bossActive) animals.push(new Animal()); }
-function restartSpawner(){ if(spawner) clearInterval(spawner); spawner=setInterval(spawnAnimal, spawnRate); }
-
-function togglePause(){ 
-    paused = !paused; 
-    document.getElementById("shop-overlay").style.display = paused ? "block" : "none";
-}
-
-function restartGame(){ 
-    score=0; lives=3; level=1; combo=1; comboBonus=0; speedMultiplier=1; spawnRate=2500;
-    animals=[]; particles=[]; trail=[]; bossActive=false; gameOver=false; paused=false;
-    document.getElementById("shop-overlay").style.display = "none";
-    if(bossTimer) clearInterval(bossTimer);
-    restartSpawner(); 
 }
 
 restartSpawner();
