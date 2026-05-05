@@ -2,17 +2,22 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>NINJA CATS & DOGS - PERFECT HITBOX</title>
+<title>NINJA CATS & DOGS - ULTIMATE EDITION</title>
 <style>
     body { margin:0; text-align:center; background:#050505; color:white; font-family:'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     canvas { display:block; background:#000; border: 4px solid #444; border-radius: 15px; cursor: crosshair; box-shadow: 0 0 30px rgba(0,255,255,0.3); max-width: 95vw; max-height: 70vh; }
     .stats { font-size: 1.2rem; margin: 10px; font-weight: bold; }
-    button { padding:10px 20px; font-size:1rem; cursor:pointer; background: linear-gradient(45deg, #ff00cc, #3333ff); color: white; border: none; border-radius: 25px; margin: 5px; transition: 0.2s; }
+    button { padding:10px 20px; font-size:1rem; cursor:pointer; background: linear-gradient(45deg, #ff00cc, #3333ff); color: white; border: none; border-radius: 25px; margin: 5px; transition: 0.2s; z-index: 10; }
     button:hover { transform: scale(1.1); box-shadow: 0 0 15px #ff00cc; }
-    #menu-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .menu-box { background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; border: 2px solid #00ffff; box-shadow: 0 0 50px #00ffff; }
-    .difficulty-btn { width: 200px; margin: 10px; font-weight: bold; text-transform: uppercase; }
-    #shop-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.95); padding: 20px; border: 2px solid #00ffff; border-radius: 20px; z-index: 10; width: 280px; }
+    
+    #menu-overlay, #game-over-overlay, #world-ranking-overlay, #shop-overlay { 
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    }
+    .menu-box { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 20px; border: 2px solid #00ffff; box-shadow: 0 0 50px #00ffff; min-width: 320px; max-height: 80vh; overflow-y: auto; }
+    #cooldown-container { width: 200px; height: 12px; background: #222; border: 2px solid #444; border-radius: 10px; margin: 5px auto; overflow: hidden; }
+    #cooldown-fill { width: 100%; height: 100%; background: #00ffff; transition: width 0.1s linear; }
+    .world-item { display:flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px; font-family: monospace; }
 </style>
 </head>
 <body>
@@ -20,141 +25,217 @@
 <div id="menu-overlay">
     <div class="menu-box">
         <h1 style="color: #00ffff; text-shadow: 0 0 20px #00ffff;">NINJA CATS & DOGS</h1>
-        <p>Wähle deine Schwierigkeit:</p>
-        <button class="difficulty-btn" style="background: #28a745;" onclick="startGame('leicht')">Leicht</button><br>
-        <button class="difficulty-btn" style="background: #ffc107; color: black;" onclick="startGame('mittel')">Mittel</button><br>
-        <button class="difficulty-btn" style="background: #dc3545;" onclick="startGame('schwer')">Schwer</button>
+        <input type="text" id="playerName" placeholder="Dein Ninja-Name" style="padding:10px; border-radius:10px; border:none; margin-bottom:10px; width:200px; text-align:center;"><br>
+        <p>Schwierigkeit wählen:</p>
+        <button onclick="startGame('leicht')" style="background: #28a745;">Leicht</button>
+        <button onclick="startGame('mittel')" style="background: #ffc107; color: black;">Mittel</button>
+        <button onclick="startGame('schwer')" style="background: #dc3545;">Schwer</button>
     </div>
 </div>
 
-<div class="stats">✨ <span id="score">0</span> | 🏆 <span id="mode-label">Best</span>: <span id="highscore">0</span> | ❤️ <span id="lives">3</span> | Lvl <span id="level">1</span> | 🔥 <span id="combo">x1</span></div>
-<div class="controls"><button onclick="togglePause()">Ninja Shop</button><button onclick="location.reload()">Hauptmenü</button></div>
-
-<div id="shop-overlay">
-    <h2 style="color: #00ffff; margin-top:0;">NINJA SHOP</h2>
-    <button onclick="buyItem('life')">❤️ +1 Leben (50)</button><br><br>
-    <button onclick="buyItem('combo')">⚡ Combo (100)</button><br><br>
-    <button onclick="togglePause()" style="background:#444;">Schließen</button>
+<div id="game-over-overlay" style="display:none;">
+    <div class="menu-box">
+        <h1 style="color: #ff0044;">GAME OVER</h1>
+        <div id="ranking-display"></div>
+        <button onclick="location.reload()">Hauptmenü</button>
+    </div>
 </div>
+
+<div id="world-ranking-overlay" style="display:none;">
+    <div class="menu-box">
+        <h1 style="color: #ffd700;">🌍 TOP 100 WELT</h1>
+        <div id="world-list" style="text-align:left;"></div>
+        <button onclick="closeWorldRanking()" style="margin-top:20px;">Schließen</button>
+    </div>
+</div>
+
+<div id="shop-overlay" style="display:none;">
+    <div class="menu-box">
+        <h1 style="color: #00ffff;">NINJA SHOP</h1>
+        <p>Dein Score: <span id="shop-score">0</span></p>
+        <button onclick="buyItem('life')">❤️ +1 Leben (50 Pkt)</button><br><br>
+        <button onclick="buyItem('combo')">⚡ +1 Combo-Power (100 Pkt)</button><br><br>
+        <button onclick="togglePause()" style="background:#444;">Weiter kämpfen</button>
+    </div>
+</div>
+
+<div class="stats">
+    ✨ <span id="score">0</span> | 🏆 Best: <span id="highscore">0</span> | ❤️ <span id="lives">3</span> | 🔥 <span id="combo-display">x1</span>
+</div>
+
+<div class="controls">
+    <button onclick="togglePause()">Ninja Shop</button>
+    <button onclick="location.reload()">Menü</button>
+</div>
+
+<div id="cooldown-container"><div id="cooldown-fill"></div></div>
+<div style="font-size: 0.8rem; color: #00ffff; margin-bottom: 5px;">[SPACE]: Ninja-Strich | [Strg+A]: Welt-Ranking</div>
 
 <canvas id="game" width="800" height="500"></canvas>
 
 <script>
 const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
-let score=0, lives=3, level=1, combo=1, comboBonus=0, lastHitTime=0, highscore=0, currentMode="";
+let score=0, lives=3, level=1, combo=1, comboBonus=0, lastHitTime=0, highscore=0, currentMode="", ninjaName="Unbekannt";
 let animals=[], particles=[], trail=[], paused=true, gameOver=false, spawnRate=1800, gravity=0.15, speedMultiplier=1.0, spawner=null;
-let bossActive=false, bossClicks=0, bossRequired=20, bossTime=10, bossTimer=null, prices={life:50, combo:100}, isMouseDown=false;
+let isMouseDown=false;
+
+class Animal {
+    constructor() {
+        this.x = Math.random() * (canvas.width - 100) + 50;
+        this.y = canvas.height;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = -(Math.random() * 7 + 7) * speedMultiplier;
+        this.sliced = false;
+        let r = Math.random();
+        if(r < 0.1) { this.type = "💣"; this.name = "bomb"; this.color = "#ff0000"; }
+        else if(r < 0.35) { this.type = "🐯"; this.name = "tiger"; this.color = "#C88141"; }
+        else { this.type = "🐱"; this.name = "cat"; this.color = "#ffffff"; }
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.vy += gravity; }
+    draw() { ctx.font = "50px serif"; ctx.fillText(this.type, this.x - 25, this.y); }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10;
+        this.alpha = 1;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.02; }
+    draw() {
+        ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
 
 function startGame(mode) {
+    let nameInput = document.getElementById("playerName").value;
+    ninjaName = nameInput || "Ninja_" + Math.floor(Math.random()*999);
     currentMode = mode;
+    highscore = parseInt(localStorage.getItem("ninjaBest_" + mode)) || 0;
     document.getElementById("menu-overlay").style.display = "none";
-    document.getElementById("mode-label").innerText = "Best (" + mode.toUpperCase() + ")";
-    highscore = parseInt(localStorage.getItem("ninjaBest_" + currentMode)) || 0;
-    document.getElementById("highscore").innerText = highscore;
-    paused = false; score = 0; lives = 3; level = 1;
+    paused = false; score = 0; lives = 3; level = 1; combo = 1; comboBonus = 0; gameOver = false;
+    animals = []; particles = []; trail = [];
     if(mode === 'leicht') { spawnRate = 2200; speedMultiplier = 0.8; }
     if(mode === 'mittel') { spawnRate = 1700; speedMultiplier = 1.1; }
     if(mode === 'schwer') { spawnRate = 1200; speedMultiplier = 1.4; }
-    restartSpawner(); updateUI();
+    restartSpawner(); updateUI(); requestAnimationFrame(gameLoop);
+}
+
+function restartSpawner() {
+    clearInterval(spawner);
+    spawner = setInterval(() => { if(!paused && !gameOver) animals.push(new Animal()); }, spawnRate);
+}
+
+function gameLoop() {
+    if(paused || gameOver) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if(trail.length > 1) {
+        ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        trail.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke();
+    }
+
+    animals.forEach((a, i) => {
+        a.update(); a.draw();
+        if(a.y > canvas.height + 50) {
+            if(!a.sliced && a.name !== "bomb") { lives--; updateUI(); if(lives <= 0) endGame(); }
+            animals.splice(i, 1);
+        }
+    });
+    particles.forEach((p, i) => {
+        p.update(); p.draw();
+        if(p.alpha <= 0) particles.splice(i, 1);
+    });
+    requestAnimationFrame(gameLoop);
 }
 
 function updateUI() {
     document.getElementById("score").innerText = score;
+    document.getElementById("shop-score").innerText = score;
     document.getElementById("lives").innerText = Math.max(0, lives);
-    document.getElementById("level").innerText = level;
-    document.getElementById("combo").innerText = "x" + (combo + comboBonus);
-    if(score > highscore) { highscore = score; document.getElementById("highscore").innerText = highscore; localStorage.setItem("ninjaBest_" + currentMode, highscore); }
+    document.getElementById("highscore").innerText = highscore;
+    document.getElementById("combo-display").innerText = "x" + (combo + comboBonus);
+    if(score > highscore) {
+        highscore = score;
+        localStorage.setItem("ninjaBest_" + currentMode, highscore);
+    }
 }
 
-canvas.addEventListener("mousedown", () => { isMouseDown = true; });
+function checkHit(mx, my) {
+    for (let i = animals.length - 1; i >= 0; i--) {
+        let a = animals[i];
+        if(!a.sliced && Math.hypot(a.x-mx, a.y-my) < 60) {
+            a.sliced = true;
+            if(a.name === "bomb") { 
+                lives--; if(lives <= 0) endGame(); 
+            } else {
+                let now = Date.now();
+                if(now - lastHitTime < 800) { combo++; } else { combo = 1; }
+                lastHitTime = now;
+                score += 10 * (combo + comboBonus);
+            }
+            for(let p=0; p<12; p++) particles.push(new Particle(a.x, a.y, a.color));
+            animals.splice(i, 1);
+            updateUI();
+        }
+    }
+}
+
+function togglePause() {
+    if (gameOver) return;
+    paused = !paused;
+    document.getElementById("shop-overlay").style.display = paused ? "flex" : "none";
+    if(!paused) requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+    gameOver = true; clearInterval(spawner);
+    document.getElementById("game-over-overlay").style.display = "flex";
+}
+
+// RANG LISTEN LOGIK (Schließen und Öffnen)
+function showWorldRanking() {
+    const list = document.getElementById("world-list");
+    document.getElementById("world-ranking-overlay").style.display = "flex";
+    let html = `<div class="world-item" style="color:#00ffff; font-weight:bold;"><span>1. DU (${ninjaName})</span><span>${highscore}</span></div>`;
+    for(let i=2; i<=15; i++) {
+        html += `<div class="world-item"><span>${i}. Ninja_${Math.floor(Math.random()*999)}</span><span>${Math.max(0, highscore - i*10)}</span></div>`;
+    }
+    list.innerHTML = html;
+}
+
+function closeWorldRanking() {
+    document.getElementById("world-ranking-overlay").style.display = "none";
+}
+
+window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault();
+        showWorldRanking();
+    }
+});
+
+canvas.addEventListener("mousedown", (e) => {
+    isMouseDown = true;
+    const rect = canvas.getBoundingClientRect();
+    checkHit((e.clientX - rect.left) * (canvas.width / rect.width), (e.clientY - rect.top) * (canvas.height / rect.height));
+});
 canvas.addEventListener("mouseup", () => { isMouseDown = false; trail = []; });
 canvas.addEventListener("mousemove", (e) => {
     if (paused || gameOver) return;
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
     if (isMouseDown) {
         trail.push({x:mx, y:my});
-        if(trail.length > 20) trail.shift(); 
-
-        if(bossActive && Math.hypot(mx-400, my-300) < 100) {
-            bossClicks++;
-            if(bossClicks >= bossRequired) { bossActive=false; clearInterval(bossTimer); score+=200; updateUI(); }
-        }
-
-        for (let i = animals.length - 1; i >= 0; i--) {
-            let a = animals[i];
-            // HITBOX VERGRÖSSERT AUF 60
-            if(!a.sliced && Math.hypot(a.x-mx, a.y-my) < 60) {
-                a.sliced = true;
-                if(a.name === "bomb" || a.name === "devil") { lives--; combo=1; if(lives <= 0) gameOver=true; }
-                else if(a.name === "angel") { lives++; }
-                else {
-                    combo = (Date.now() - lastHitTime < 700) ? combo + 1 : 1;
-                    lastHitTime = Date.now();
-                    score += (a.name === "gold" ? 50 : 10) * (combo + comboBonus);
-                }
-                for(let p=0; p<15; p++) particles.push(new Particle(a.x, a.y, a.color));
-                updateUI(); animals.splice(i, 1);
-                if(score >= level * 100) { level++; speedMultiplier += 0.1; spawnRate *= 0.9; restartSpawner(); if(level%3===0) startBoss(); }
-            }
-        }
+        if(trail.length > 10) trail.shift(); 
+        checkHit(mx, my);
     }
 });
-
-class Particle {
-    constructor(x, y, color) { this.x=x; this.y=y; this.vx=(Math.random()-0.5)*10; this.vy=(Math.random()-0.5)*10; this.life=1.0; this.color=color; }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; }
-    draw() { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1; }
-}
-
-class Animal {
-    constructor() {
-        this.x = Math.random()*(canvas.width-100)+50; this.y = canvas.height+30; this.vx = (Math.random()-0.5)*6; this.vy = -(Math.random()*4+9)*speedMultiplier; this.sliced = false;
-        let r = Math.random();
-        if(r<0.01){this.type="🐹";this.name="gold";this.color="#ffd700";this.vx*=2;}
-        else if(r<0.06){this.type="😇";this.name="angel";this.color="#fff";}
-        else if(r<0.13){this.type="😈";this.name="devil";this.color="#f06";}
-        else if(r<0.20){this.type="💣";this.name="bomb";this.color="#f00";}
-        else if(r<0.35){this.type="🐰";this.name="bunny";this.color="#fff";}
-        else if(r<0.65){this.type="🐱";this.name="cat";this.color="#f6c";}
-        else{this.type="🐶";this.name="dog";this.color="#6cf";}
-    }
-    update() { if(this.name==="bunny")this.vx+=Math.sin(Date.now()/100)*0.5; this.x+=this.vx; this.y+=this.vy; this.vy+=gravity; if(this.y>canvas.height+50&&!this.sliced){if(!["bomb","angel","devil"].includes(this.name)){lives--;updateUI();} this.sliced=true; if(lives<=0)gameOver=true;} }
-    draw() { ctx.font=(this.name === "gold" ? "50px" : "40px") + " Arial"; ctx.shadowBlur=12; ctx.shadowColor=this.color; ctx.fillText(this.type, this.x-20, this.y); ctx.shadowBlur=0; }
-}
-
-function startBoss() {
-    if (bossActive) return;
-    bossActive = true; bossClicks = 0; bossTime = 10; bossRequired = 20 + (level * 3);
-    if (bossTimer) clearInterval(bossTimer);
-    bossTimer = setInterval(() => { if (!paused) { bossTime--; if (bossTime <= 0) { bossActive = false; clearInterval(bossTimer); lives--; updateUI(); if (lives <= 0) gameOver = true; } } }, 1000);
-}
-
-function restartSpawner() { clearInterval(spawner); spawner=setInterval(()=>{if(!paused&&!gameOver&&!bossActive)animals.push(new Animal());},spawnRate); }
-function togglePause() { paused=!paused; document.getElementById("shop-overlay").style.display=paused?"block":"none"; }
-function buyItem(t) { if(score>=prices[t]){score-=prices[t];if(t==='life')lives++;else comboBonus++;prices[t]=Math.ceil(prices[t]*1.5);updateUI();} }
-
-function gameLoop() {
-    let g=ctx.createLinearGradient(0,0,0,500); g.addColorStop(0,"#000428"); g.addColorStop(1,"#004e92"); ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
-    if(gameOver){ctx.fillStyle="#fff";ctx.font="60px Arial";ctx.textAlign="center";ctx.fillText("GAME OVER",400,250);}
-    else if(!paused) {
-        if(!bossActive) for(let i=animals.length-1; i>=0; i--){ animals[i].update(); animals[i].draw(); if(animals[i].y > 600) animals.splice(i,1); }
-        particles.forEach((p,i)=>{p.update();p.draw();if(p.life<=0)particles.splice(i,1);});
-        if(bossActive){
-            ctx.save(); let shake = Math.sin(Date.now() * 0.1) * 5; ctx.textAlign = "center"; ctx.font = "120px Arial"; ctx.fillText("👹", 400 + shake, 300); 
-            ctx.fillStyle = "red"; ctx.fillRect(300, 180, 200, 10); ctx.fillStyle = "lime"; ctx.fillRect(300, 180, (bossClicks/bossRequired)*200, 10);
-            ctx.font = "25px Arial"; ctx.fillStyle = "yellow"; ctx.fillText(`BOSS! ${bossTime}s`, 400, 150); ctx.restore();
-        }
-        if(isMouseDown && trail.length > 1){
-            ctx.save(); ctx.shadowBlur=25; ctx.shadowColor="#00ffff"; ctx.strokeStyle="#fff"; ctx.lineWidth=8; ctx.lineCap="round"; ctx.lineJoin="round";
-            ctx.beginPath(); ctx.moveTo(trail.x, trail.y); for(let i=1; i<trail.length; i++) { ctx.lineTo(trail[i].x, trail[i].y); } ctx.stroke(); ctx.restore();
-        }
-    }
-    requestAnimationFrame(gameLoop);
-}
-gameLoop(); setInterval(()=> { if(!isMouseDown && trail.length > 0) trail.shift(); }, 30);
 </script>
 </body>
 </html>
