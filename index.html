@@ -212,6 +212,27 @@ function closeWorldRanking() {
     document.getElementById("world-ranking-overlay").style.display = "none";
 }
 
+// HIER IST DIE REPARIERTE SHOP-LOGIK
+function buyItem(itemType) {
+    if (itemType === 'life') {
+        if (score >= 50) {
+            score -= 50;
+            lives++;
+            updateUI();
+        } else {
+            alert("Nicht genug Punkte für ein Leben!");
+        }
+    } else if (itemType === 'combo') {
+        if (score >= 100) {
+            score -= 100;
+            comboBonus++;
+            updateUI();
+        } else {
+            alert("Nicht genug Punkte für Combo-Power!");
+        }
+    }
+}
+
 window.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === 'a') {
         e.preventDefault();
@@ -238,4 +259,4 @@ canvas.addEventListener("mousemove", (e) => {
 });
 </script>
 </body>
-</html>
+</html>         
