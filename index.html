@@ -260,3 +260,120 @@ canvas.addEventListener("mousemove", (e) => {
 </script>
 </body>
 </html>         
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sternenfall Hintergrund</title>
+    <style>
+        /* Setzt die Seite auf volle Breite/Höhe und versteckt Scrollbalken */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            font-family: sans-serif;
+        }
+
+        /* Container für die Sternschnuppen */
+        .night {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform: rotateZ(45deg); /* Dreht die Flugrichtung der Sterne */
+        }
+
+        /* Basis-Styling für jede Sternschnuppen-Linie */
+        .shooting-star {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            height: 2px;
+            background: linear-gradient(-45deg, #5f91ff, rgba(0, 0, 255, 0));
+            border-radius: 999px;
+            filter: drop-shadow(0 0 6px #699bff);
+            animation: tail 3000ms ease-in-out infinite, shooting 3000ms ease-in-out infinite;
+        }
+
+        /* Der leuchtende Kopf der Sternschnuppen */
+        .shooting-star::before, .shooting-star::after {
+            content: '';
+            position: absolute;
+            top: calc(50% - 1px);
+            right: 0;
+            height: 2px;
+            background: linear-gradient(-45deg, rgba(0, 0, 255, 0), #5f91ff, rgba(0, 0, 255, 0));
+            transform: translateX(50%) rotateZ(45deg);
+            border-radius: 100%;
+            animation: shining 3000ms ease-in-out infinite;
+        }
+
+        .shooting-star::after {
+            transform: translateX(50%) rotateZ(-45deg);
+        }
+
+        /* Individuelle Positionen, Verzögerungen und Längen der Sterne */
+        .shooting-star:nth-child(1) { top: 10%; left: 20%; animation-delay: 0ms; animation-duration: 2500ms; }
+        .shooting-star:nth-child(2) { top: 30%; left: 40%; animation-delay: 800ms; animation-duration: 3200ms; }
+        .shooting-star:nth-child(3) { top: 5%; left: 60%; animation-delay: 1500ms; animation-duration: 2800ms; }
+        .shooting-star:nth-child(4) { top: 50%; left: 10%; animation-delay: 2200ms; animation-duration: 3500ms; }
+        .shooting-star:nth-child(5) { top: 25%; left: 80%; animation-delay: 500ms; animation-duration: 3000ms; }
+        .shooting-star:nth-child(6) { top: 70%; left: 30%; animation-delay: 1800ms; animation-duration: 2700ms; }
+        .shooting-star:nth-child(7) { top: 40%; left: 70%; animation-delay: 1100ms; animation-duration: 3300ms; }
+
+        /* Animation für das Ausfahren des Schweifs */
+        @keyframes tail {
+            0% { width: 0; }
+            30% { width: 100px; }
+            100% { width: 0; }
+        }
+
+        /* Animation für das Leuchten */
+        @keyframes shining {
+            0% { width: 0; }
+            50% { width: 30px; }
+            100% { width: 0; }
+        }
+
+        /* Animation für die Bewegung über den Bildschirm */
+        @keyframes shooting {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(300px); }
+        }
+
+        /* Overlay-Text (kann gelöscht werden) */
+        .content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="content">
+        <h1>Sternenfall</h1>
+        <p>Ein reiner CSS-Hintergrund.</p>
+    </div>
+
+    <!-- Die CSS-Sterne -->
+    <div class="night">
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+    </div>
+
+</body>
+</html>
